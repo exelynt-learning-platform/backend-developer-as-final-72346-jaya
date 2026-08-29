@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -108,18 +109,20 @@ class BookingApiIntegrationTests {
         String userToken = login("user@example.com", "user123");
         long resourceId = createResource(adminToken, "Filtered Reservation Room", "45.00");
         long reservationId = createReservation(userToken, resourceId, 2);
+        createReservation(userToken, resourceId, 1);
 
         mockMvc.perform(get("/reservations")
                         .header("Authorization", bearer(userToken))
                         .param("status", "PENDING")
-                        .param("minPrice", "80")
+                        .param("minPrice", "40")
                         .param("maxPrice", "100")
                         .param("page", "0")
                         .param("size", "5")
                         .param("sort", "price,desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(reservationId))
-                .andExpect(jsonPath("$.content[0].price").value(90.00));
+                .andExpect(jsonPath("$.content[0].price").value(90.00))
+                .andExpect(jsonPath("$.content[*].price", contains(90.0, 45.0)));
 
         mockMvc.perform(put("/reservations/" + reservationId + "/status")
                         .header("Authorization", bearer(adminToken))

@@ -9,6 +9,7 @@ import com.exelynt.booking.entity.ReservationStatus;
 import com.exelynt.booking.entity.Resource;
 import com.exelynt.booking.entity.Role;
 import com.exelynt.booking.entity.User;
+import com.exelynt.booking.exception.ApiMessages;
 import com.exelynt.booking.exception.ForbiddenException;
 import com.exelynt.booking.exception.NotFoundException;
 import com.exelynt.booking.repository.ReservationRepository;
@@ -29,6 +30,9 @@ import java.util.List;
 
 @Service
 public class ReservationService {
+    private static final int PRICE_SCALE = 2;
+    private static final int MINUTES_PER_HOUR = 60;
+
     private final ReservationRepository reservationRepository;
     private final ResourceService resourceService;
     private final UserRepository userRepository;
@@ -70,7 +74,7 @@ public class ReservationService {
     public ReservationResponse updateStatus(Long id, ReservationUpdateRequest request, User requester) {
         Reservation reservation = getEntity(id);
         if (requester.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("Only admins can update reservation status");
+            throw new ForbiddenException(ApiMessages.ADMIN_UPDATE_RESERVATION_STATUS_ONLY);
         }
         reservation.setStatus(request.status());
         return toResponse(reservation);
@@ -79,7 +83,7 @@ public class ReservationService {
     @Transactional
     public ReservationResponse update(Long id, ReservationAdminUpdateRequest request, User requester) {
         if (requester.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("Only admins can update reservations");
+            throw new ForbiddenException(ApiMessages.ADMIN_UPDATE_RESERVATIONS_ONLY);
         }
         validateTimes(request.startTime(), request.endTime());
         Resource resource = getBookableResource(request.resourceId());
@@ -103,7 +107,7 @@ public class ReservationService {
     @Transactional
     public void delete(Long id, User requester) {
         if (requester.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("Only admins can delete reservations");
+            throw new ForbiddenException(ApiMessages.ADMIN_DELETE_RESERVATIONS_ONLY);
         }
         reservationRepository.delete(getEntity(id));
     }
@@ -136,14 +140,14 @@ public class ReservationService {
 
     private void validateTimes(LocalDateTime startTime, LocalDateTime endTime) {
         if (!endTime.isAfter(startTime)) {
-            throw new IllegalArgumentException("Reservation endTime must be after startTime");
+            throw new IllegalArgumentException(ApiMessages.RESERVATION_END_AFTER_START);
         }
     }
 
     private Resource getBookableResource(Long resourceId) {
         Resource resource = resourceService.getEntity(resourceId);
         if (!resource.isAvailable()) {
-            throw new IllegalArgumentException("Resource is not available for booking");
+            throw new IllegalArgumentException(ApiMessages.RESOURCE_NOT_AVAILABLE);
         }
         return resource;
     }
@@ -172,24 +176,25 @@ public class ReservationService {
 
     private BigDecimal calculatePrice(Resource resource, LocalDateTime startTime, LocalDateTime endTime) {
         long minutes = Duration.between(startTime, endTime).toMinutes();
-        BigDecimal hours = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.CEILING);
-        return resource.getPricePerHour().multiply(hours).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal hours = BigDecimal.valueOf(minutes)
+                .divide(BigDecimal.valueOf(MINUTES_PER_HOUR), PRICE_SCALE, RoundingMode.CEILING);
+        return resource.getPricePerHour().multiply(hours).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
     }
 
     private void ensureAdminOrOwner(Reservation reservation, User requester) {
         boolean owner = reservation.getUser().getId().equals(requester.getId());
         if (requester.getRole() != Role.ADMIN && !owner) {
-            throw new ForbiddenException("You can access only your own reservations");
+            throw new ForbiddenException(ApiMessages.ACCESS_OWN_RESERVATIONS_ONLY);
         }
     }
 
     private Reservation getEntity(Long id) {
         return reservationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+                .orElseThrow(() -> new NotFoundException(ApiMessages.RESERVATION_NOT_FOUND));
     }
 
     private User getManagedUser(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
+        return userRepository.findById(id).orElseThrow(() -> new NotFoundException(ApiMessages.USER_NOT_FOUND));
     }
 
     private ReservationResponse toResponse(Reservation reservation) {

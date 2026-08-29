@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<ApiError> invalidRequest(Exception ex, HttpServletRequest request) {
-        return error(HttpStatus.BAD_REQUEST, "Invalid request value or JSON body", request, null);
+        return error(HttpStatus.BAD_REQUEST, ApiMessages.INVALID_REQUEST_VALUE_OR_JSON, request, null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -42,12 +43,12 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(fieldError ->
                 errors.put(fieldError.getField(), fieldError.getDefaultMessage()));
-        return error(HttpStatus.BAD_REQUEST, "Validation failed", request, errors);
+        return error(HttpStatus.BAD_REQUEST, ApiMessages.VALIDATION_FAILED, request, errors);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> unexpected(Exception ex, HttpServletRequest request) {
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request, null);
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, ApiMessages.UNEXPECTED_SERVER_ERROR, request, null);
     }
 
     private ResponseEntity<ApiError> error(HttpStatus status,
@@ -59,8 +60,8 @@ public class GlobalExceptionHandler {
                 status.value(),
                 status.getReasonPhrase(),
                 message,
-                request.getRequestURI(),
-                validationErrors
+                request == null ? "" : request.getRequestURI(),
+                validationErrors == null ? Collections.emptyMap() : validationErrors
         ));
     }
 }

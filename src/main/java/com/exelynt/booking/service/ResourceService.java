@@ -3,6 +3,7 @@ package com.exelynt.booking.service;
 import com.exelynt.booking.dto.ResourceRequest;
 import com.exelynt.booking.dto.ResourceResponse;
 import com.exelynt.booking.entity.Resource;
+import com.exelynt.booking.exception.ApiMessages;
 import com.exelynt.booking.exception.NotFoundException;
 import com.exelynt.booking.repository.ResourceRepository;
 import org.springframework.data.domain.Page;
@@ -57,7 +58,7 @@ public class ResourceService {
 
     public Resource getEntity(Long id) {
         return resourceRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Resource not found"));
+                .orElseThrow(() -> new NotFoundException(ApiMessages.RESOURCE_NOT_FOUND));
     }
 
     public ResourceResponse toResponse(Resource resource) {

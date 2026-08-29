@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -27,9 +26,10 @@ public class JwtService {
     }
 
     public String generateToken(User user) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getId());
-        claims.put("role", user.getRole().name());
+        Map<String, Object> claims = Map.of(
+                "userId", user.getId(),
+                "role", user.getRole().name()
+        );
         return Jwts.builder()
                 .claims(claims)
                 .subject(user.getEmail())
@@ -44,20 +44,32 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        return userDetails.getUsername().equals(extractUsername(token)) && !isExpired(token);
+        Claims claims = extractAllClaims(token);
+        return userDetails.getUsername().equals(claims.getSubject())
+                && !isExpired(claims)
+                && roleClaimMatches(claims, userDetails);
     }
 
-    private boolean isExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+    private boolean isExpired(Claims claims) {
+        return claims.getExpiration().before(new Date());
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> resolver) {
-        Claims claims = Jwts.parser()
+        return resolver.apply(extractAllClaims(token));
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(key())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return resolver.apply(claims);
+    }
+
+    private boolean roleClaimMatches(Claims claims, UserDetails userDetails) {
+        String role = claims.get("role", String.class);
+        return role != null && userDetails.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_" + role));
     }
 
     private SecretKey key() {

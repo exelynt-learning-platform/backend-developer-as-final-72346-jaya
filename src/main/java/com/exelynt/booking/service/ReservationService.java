@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,20 +61,8 @@ public class ReservationService {
     @Transactional
     public ReservationResponse create(ReservationRequest request, User requester) {
         validateTimes(request);
-        Resource resource = resourceService.getEntity(request.resourceId());
-        if (!resource.isAvailable()) {
-            throw new IllegalArgumentException("Resource is not available for booking");
-        }
-
-        Reservation reservation = new Reservation();
-        reservation.setResource(resource);
-        reservation.setUser(getManagedUser(requester.getId()));
-        reservation.setStartTime(request.startTime());
-        reservation.setEndTime(request.endTime());
-        reservation.setStatus(requester.getRole() == Role.ADMIN && request.status() != null
-                ? request.status()
-                : ReservationStatus.PENDING);
-        reservation.setPrice(calculatePrice(resource, request));
+        Resource resource = getBookableResource(request.resourceId());
+        Reservation reservation = buildReservation(request, requester, resource);
         return toResponse(reservationRepository.save(reservation));
     }
 
@@ -92,13 +81,8 @@ public class ReservationService {
         if (requester.getRole() != Role.ADMIN) {
             throw new ForbiddenException("Only admins can update reservations");
         }
-        if (!request.endTime().isAfter(request.startTime())) {
-            throw new IllegalArgumentException("Reservation endTime must be after startTime");
-        }
-        Resource resource = resourceService.getEntity(request.resourceId());
-        if (!resource.isAvailable()) {
-            throw new IllegalArgumentException("Resource is not available for booking");
-        }
+        validateTimes(request.startTime(), request.endTime());
+        Resource resource = getBookableResource(request.resourceId());
         Reservation reservation = getEntity(id);
         reservation.setResource(resource);
         reservation.setStartTime(request.startTime());
@@ -147,16 +131,46 @@ public class ReservationService {
     }
 
     private void validateTimes(ReservationRequest request) {
-        if (!request.endTime().isAfter(request.startTime())) {
+        validateTimes(request.startTime(), request.endTime());
+    }
+
+    private void validateTimes(LocalDateTime startTime, LocalDateTime endTime) {
+        if (!endTime.isAfter(startTime)) {
             throw new IllegalArgumentException("Reservation endTime must be after startTime");
         }
+    }
+
+    private Resource getBookableResource(Long resourceId) {
+        Resource resource = resourceService.getEntity(resourceId);
+        if (!resource.isAvailable()) {
+            throw new IllegalArgumentException("Resource is not available for booking");
+        }
+        return resource;
+    }
+
+    private Reservation buildReservation(ReservationRequest request, User requester, Resource resource) {
+        Reservation reservation = new Reservation();
+        reservation.setResource(resource);
+        reservation.setUser(getManagedUser(requester.getId()));
+        reservation.setStartTime(request.startTime());
+        reservation.setEndTime(request.endTime());
+        reservation.setStatus(resolveInitialStatus(request, requester));
+        reservation.setPrice(calculatePrice(resource, request));
+        return reservation;
+    }
+
+    private ReservationStatus resolveInitialStatus(ReservationRequest request, User requester) {
+        if (requester.getRole() == Role.ADMIN && request.status() != null) {
+            return request.status();
+        }
+        return ReservationStatus.PENDING;
     }
 
     private BigDecimal calculatePrice(Resource resource, ReservationRequest request) {
         return calculatePrice(resource, request.startTime(), request.endTime());
     }
 
-    private BigDecimal calculatePrice(Resource resource, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+    private BigDecimal calculatePrice(Resource resource, LocalDateTime startTime, LocalDateTime endTime) {
         long minutes = Duration.between(startTime, endTime).toMinutes();
         BigDecimal hours = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.CEILING);
         return resource.getPricePerHour().multiply(hours).setScale(2, RoundingMode.HALF_UP);

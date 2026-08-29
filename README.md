@@ -65,6 +65,7 @@ http://localhost:8080/swagger-ui.html
 | `JPA_DDL_AUTO` | Hibernate schema mode | `update` |
 | `JWT_SECRET` | JWT signing secret, at least 32 characters | development secret |
 | `JWT_EXPIRATION_MS` | Token lifetime in milliseconds | `86400000` |
+| `H2_CONSOLE_ENABLED` | Optional local H2 console toggle | `false` |
 
 ## PostgreSQL Configuration
 

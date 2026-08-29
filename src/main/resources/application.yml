@@ -22,7 +22,7 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:change-this-secret-to-a-long-production-value-of-at-least-32-characters}
+    secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 springdoc:

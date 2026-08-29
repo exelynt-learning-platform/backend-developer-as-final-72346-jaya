@@ -1,6 +1,7 @@
 package com.exelynt.booking.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,6 +27,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({ForbiddenException.class, AccessDeniedException.class})
     public ResponseEntity<ApiError> forbidden(RuntimeException ex, HttpServletRequest request) {
         return error(HttpStatus.FORBIDDEN, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler({ConflictException.class, DataIntegrityViolationException.class})
+    public ResponseEntity<ApiError> conflict(RuntimeException ex, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler({IllegalArgumentException.class, BadCredentialsException.class})

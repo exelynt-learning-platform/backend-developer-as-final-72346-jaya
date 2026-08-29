@@ -64,7 +64,7 @@ public class ReservationService {
 
     @Transactional
     public ReservationResponse create(ReservationRequest request, User requester) {
-        validateTimes(request);
+        validateTimes(request.startTime(), request.endTime());
         Resource resource = getBookableResource(request.resourceId());
         Reservation reservation = buildReservation(request, requester, resource);
         return toResponse(reservationRepository.save(reservation));
@@ -132,10 +132,6 @@ public class ReservationService {
             }
             return builder.and(predicates.toArray(new Predicate[0]));
         };
-    }
-
-    private void validateTimes(ReservationRequest request) {
-        validateTimes(request.startTime(), request.endTime());
     }
 
     private void validateTimes(LocalDateTime startTime, LocalDateTime endTime) {

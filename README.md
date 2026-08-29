@@ -41,10 +41,10 @@ Secure RESTful Resource Booking System built with Spring Boot 3, Java 17, Spring
 
 ## Running Locally
 
-The default configuration uses H2 so the app can start immediately:
+The default configuration uses H2 for quick local testing. Provide a JWT secret when starting the app:
 
 ```bash
-mvn spring-boot:run
+JWT_SECRET=replace-with-a-secure-32-character-minimum-secret mvn spring-boot:run
 ```
 
 Open Swagger UI:
@@ -63,7 +63,7 @@ http://localhost:8080/swagger-ui.html
 | `DB_PASSWORD` | Database password | empty |
 | `DB_DRIVER` | JDBC driver class | `org.h2.Driver` |
 | `JPA_DDL_AUTO` | Hibernate schema mode | `update` |
-| `JWT_SECRET` | JWT signing secret, at least 32 characters | development secret |
+| `JWT_SECRET` | JWT signing secret, at least 32 characters | required |
 | `JWT_EXPIRATION_MS` | Token lifetime in milliseconds | `86400000` |
 | `H2_CONSOLE_ENABLED` | Optional local H2 console toggle | `false` |
 

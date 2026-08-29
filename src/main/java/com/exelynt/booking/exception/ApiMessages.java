@@ -8,6 +8,7 @@ public final class ApiMessages {
     public static final String INVALID_REQUEST_VALUE_OR_JSON = "Invalid request value or JSON body";
     public static final String INVALID_OR_EXPIRED_JWT = "Invalid or expired JWT token";
     public static final String RESOURCE_NOT_AVAILABLE = "Resource is not available for booking";
+    public static final String RESOURCE_HAS_RESERVATIONS = "Resource cannot be deleted because it has existing reservations";
     public static final String RESERVATION_END_AFTER_START = "Reservation endTime must be after startTime";
     public static final String RESERVATION_NOT_FOUND = "Reservation not found";
     public static final String RESOURCE_NOT_FOUND = "Resource not found";

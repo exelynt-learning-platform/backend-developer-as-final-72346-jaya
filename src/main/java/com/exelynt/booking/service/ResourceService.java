@@ -4,7 +4,9 @@ import com.exelynt.booking.dto.ResourceRequest;
 import com.exelynt.booking.dto.ResourceResponse;
 import com.exelynt.booking.entity.Resource;
 import com.exelynt.booking.exception.ApiMessages;
+import com.exelynt.booking.exception.ConflictException;
 import com.exelynt.booking.exception.NotFoundException;
+import com.exelynt.booking.repository.ReservationRepository;
 import com.exelynt.booking.repository.ResourceRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,9 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ResourceService {
     private final ResourceRepository resourceRepository;
+    private final ReservationRepository reservationRepository;
 
-    public ResourceService(ResourceRepository resourceRepository) {
+    public ResourceService(ResourceRepository resourceRepository, ReservationRepository reservationRepository) {
         this.resourceRepository = resourceRepository;
+        this.reservationRepository = reservationRepository;
     }
 
     public Page<ResourceResponse> findAll(Pageable pageable) {
@@ -53,6 +57,9 @@ public class ResourceService {
     @Transactional
     public void delete(Long id) {
         Resource resource = getEntity(id);
+        if (reservationRepository.existsByResourceId(id)) {
+            throw new ConflictException(ApiMessages.RESOURCE_HAS_RESERVATIONS);
+        }
         resourceRepository.delete(resource);
     }
 

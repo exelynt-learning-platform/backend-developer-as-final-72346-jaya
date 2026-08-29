@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "app.jwt.secret=test-secret-for-jwt-signing-that-is-long-enough")
 @AutoConfigureMockMvc
 class BookingApiIntegrationTests {
     @Autowired
@@ -135,6 +135,19 @@ class BookingApiIntegrationTests {
                         .header("Authorization", bearer(userToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    void adminDeletingResourceWithReservationsReturnsConflict() throws Exception {
+        String adminToken = login("admin@example.com", "admin123");
+        String userToken = login("user@example.com", "user123");
+        long resourceId = createResource(adminToken, "Reserved Resource Cannot Be Deleted", "12.00");
+        createReservation(userToken, resourceId, 1);
+
+        mockMvc.perform(delete("/resources/" + resourceId)
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Resource cannot be deleted because it has existing reservations"));
     }
 
     private String login(String email, String password) throws Exception {
